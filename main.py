@@ -25,14 +25,12 @@ WEBSITE_URL = "https://kavrosait-lj8o.vercel.app/"
 TG_CHANNEL_URL = "https://t.me/kavroshop"
 
 # ==================== КАТАЛОГ ТОВАРОВ ====================
-# Ключи (pid) должны совпадать с теми, что сайт передаёт в ?start=
-# ВНИМАНИЕ: pid могут содержать ТОЛЬКО a-z, 0-9 (без "-", "_")
+# Ключи (pid) должны совпадать с id товаров на сайте (index.html → PRODUCTS)
 PRODUCTS = {
-    "nike":   {"name": "👟 Кроссовки Nike Air",  "price": 45000},
-    "hoodie": {"name": "👕 Худи Oversize",       "price": 25000},
-    "tshirt": {"name": "👕 Футболка базовая",    "price": 8000},
-    "cap":    {"name": "🧢 Кепка",               "price": 5000},
-    # 👇 добавляйте свои товары здесь — ключ = id на сайте
+    "fleece":   {"name": "👟 Shearling Low",    "price": 98000},
+    "runner":   {"name": "👟 Retro Runner",     "price": 115000},
+    "jeans":    {"name": "👖 Washed Straight",  "price": 65000},
+    "bracelet": {"name": "💍 Segment Bracelet", "price": 52000},
 }
 
 bot = Bot(token=BOT_TOKEN)
@@ -97,14 +95,12 @@ ADDRESS_EXAMPLE_TEXT = (
 # ==================== ПАРСИНГ КОРЗИНЫ ====================
 def parse_cart(args: str):
     """
-    Парсит start-параметр из ссылки.
-    Формат: "nike_2-hoodie_1"  (пид_кол-во через дефис)
+    Парсит start-параметр. Формат: "fleece_2-runner_1"
     Возвращает: (список позиций, итого_сумма) или (None, 0) при ошибке
     """
     items = []
     total = 0.0
     for chunk in args.split("-"):
-        # chunk = "nike_2"
         m = re.fullmatch(r"([a-z0-9]+)_(\d+)", chunk)
         if not m:
             return None, 0
@@ -125,7 +121,6 @@ def parse_cart(args: str):
 
 
 def format_cart(items, total):
-    """Красивый текст со списком товаров."""
     lines = []
     for it in items:
         lines.append(f"• {it['name']} × {it['qty']} = {int(it['line_total'])} тг")
@@ -139,7 +134,7 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext)
     await state.clear()
     args = command.args
 
-    # 1) Если параметра нет — обычное приветствие
+    # 1) Без параметра — обычное приветствие
     if not args:
         start_text = (
             "👋 **Добро пожаловать в наш официальный магазин!**\n\n"
@@ -159,7 +154,6 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext)
     items, total = parse_cart(args)
 
     if not items:
-        # Не смогли распознать — скорее всего сайт передал неизвестный pid
         await message.answer(
             "⚠️ **Не удалось распознать товар из вашей корзины.**\n\n"
             "Возможно, товар был удалён с сайта или ссылка устарела. "
@@ -169,11 +163,10 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext)
         )
         return
 
-    # Сохраняем корзину в FSM
     cart_text = format_cart(items, total)
     await state.update_data(
         cart_items=items,
-        product=cart_text,   # в БД пишем текстом
+        product=cart_text,
         amount=total,
     )
     await state.set_state(OrderStates.waiting_for_address)
@@ -208,7 +201,7 @@ async def show_delivery(message: Message):
     text = (
         "🚚 **Условия доставки**\n\n"
         "• Доставка осуществляется службой **Казпочта**.\n"
-        "• Сроки доставки: от 3 до 14 рабочих дней в зависимости от региона.\n"
+        "• Сроки доставки: от 4 до 9 рабочих дней в зависимости от региона.\n"
         "• После отправки администратор вышлет вам трек-номер (талон) для отслеживания."
     )
     await message.answer(text, parse_mode="Markdown")
